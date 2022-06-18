@@ -1,0 +1,6 @@
+Bussiness Process:
+1. Input :
+2. Handler : Handler Routes
+3. Service : Mapping ke Struct User dari struct Input
+4. Respository : Kirim ke Database
+5. DB
