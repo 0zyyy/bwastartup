@@ -25,6 +25,9 @@ func (h *userHandler) RegisterUser(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 	}
-
-	c.JSON(http.StatusOK, input)
+	user, err := h.userService.RegisterUser(input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, nil)
+	}
+	c.JSON(http.StatusOK, user)
 }
