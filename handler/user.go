@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bwastartup/helper"
 	"bwastartup/user"
 	"net/http"
 
@@ -23,11 +24,23 @@ func (h *userHandler) RegisterUser(c *gin.Context) {
 	var input user.RegisterUserInput
 	err := c.ShouldBindJSON(&input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		response := helper.APIResponse("Akun gagal regis", http.StatusBadRequest, "fail", nil)
+		c.JSON(http.StatusBadRequest, response)
+		return
 	}
-	user, err := h.userService.RegisterUser(input)
+	newUser, err := h.userService.RegisterUser(input)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, nil)
+		response := helper.APIResponse("Akun gagal regis", http.StatusBadRequest, "fail", nil)
+		c.JSON(http.StatusBadRequest, response)
+		return
 	}
-	c.JSON(http.StatusOK, user)
+	// update token
+	token := "tokentkoentok"
+	formatter := user.UserFormatter(newUser, token)
+	response := helper.APIResponse("Akun berhasil regis", http.StatusOK, "sucess", formatter)
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *userHandler) UpdateUser(c *gin.Context) {
+	//TANGKAP INPUT
 }
