@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bwastartup/auth"
 	"bwastartup/helper"
 	"bwastartup/user"
 	"net/http"
@@ -10,10 +11,11 @@ import (
 
 type userHandler struct {
 	userService user.Service
+	authService auth.Service
 }
 
-func NewUserHandler(userService user.Service) *userHandler {
-	return &userHandler{userService}
+func NewUserHandler(userService user.Service, authService auth.Service) *userHandler {
+	return &userHandler{userService, authService}
 }
 
 func (h *userHandler) RegisterUser(c *gin.Context) {
@@ -37,7 +39,11 @@ func (h *userHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 	// update token
-	token := "tokentkoentok"
+	token, err := h.authService.GenerateToken(newUser.Id)
+	if err != nil {
+		response := helper.ErrorResponse(err)
+		c.JSON(http.StatusUnprocessableEntity, response)
+	}
 	formatter := user.UserFormatter(newUser, token)
 	response := helper.APIResponse("Akun berhasil regis", http.StatusOK, "sucess", formatter)
 	c.JSON(http.StatusOK, response)
@@ -60,7 +66,12 @@ func (h *userHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
-	formatter := user.UserFormatter(loginin, "tokentokentoken")
+	token, err := h.authService.GenerateToken(loginin.Id)
+	if err != nil {
+		response := helper.ErrorResponse(err)
+		c.JSON(http.StatusUnprocessableEntity, response)
+	}
+	formatter := user.UserFormatter(loginin, token)
 	c.JSON(http.StatusOK, formatter)
 }
 
@@ -84,4 +95,35 @@ func (h *userHandler) CheckEmail(c *gin.Context) {
 	}
 	response := helper.APIResponse(metaMsg, http.StatusOK, "sucess", data)
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *userHandler) UploadAvatar(c *gin.Context) {
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		data := gin.H{"errors": err.Error()}
+		response := helper.APIResponse("Upload Avatar Gaiso", http.StatusBadRequest, "fail", data)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	//INI PAS BAGIAN UPLOAD
+	path := "/img/" + file.Filename
+	err = c.SaveUploadedFile(file, path)
+	if err != nil {
+		data := gin.H{"is_uploaded": false}
+		response := helper.APIResponse("Upload Avatar Gaiso", http.StatusBadRequest, "fail", data)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	// INI PAS BAGIAN UPDATE
+	userId := 1
+	_, err = h.userService.SaveAvatar(userId, file.Filename)
+	if err != nil {
+		data := gin.H{"is_uploaded": false}
+		response := helper.APIResponse("Upload Avatar Gaiso", http.StatusBadRequest, "fail", data)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	data := gin.H{"is_uploaded": true}
+	response := helper.APIResponse("Terjadi kesalahan", http.StatusOK, "success", data)
+	c.JSON(http.StatusBadRequest, response)
 }
