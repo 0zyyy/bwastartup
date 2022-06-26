@@ -66,10 +66,11 @@ func (h *userHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
+	// token lagi
 	token, err := h.authService.GenerateToken(loginin.Id)
 	if err != nil {
 		response := helper.ErrorResponse(err)
-		c.JSON(http.StatusUnprocessableEntity, response)
+		c.JSON(http.StatusBadRequest, response)
 	}
 	formatter := user.UserFormatter(loginin, token)
 	c.JSON(http.StatusOK, formatter)
@@ -115,7 +116,7 @@ func (h *userHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 	// INI PAS BAGIAN UPDATE
-	userId := 1
+	userId := c.MustGet("currentUser").(user.User).Id
 	_, err = h.userService.SaveAvatar(userId, file.Filename)
 	if err != nil {
 		data := gin.H{"is_uploaded": false}
