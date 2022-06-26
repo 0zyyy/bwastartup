@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type Repository interface {
 	AddCampaign(campaign Campaign) (Campaign, error)
-	GetCampaigns() ([]Campaign, error)
+	FindAll() ([]Campaign, error)
 	FindByUserId(userId int) ([]Campaign, error)
 }
 
@@ -24,7 +24,7 @@ func (r *repository) AddCampaign(campaign Campaign) (Campaign, error) {
 	return campaign, nil
 }
 
-func (r *repository) GetCampaigns() ([]Campaign, error) {
+func (r *repository) FindAll() ([]Campaign, error) {
 	var campaigns []Campaign
 	err := r.db.Find(&campaigns).Error
 	if err != nil {
@@ -35,7 +35,7 @@ func (r *repository) GetCampaigns() ([]Campaign, error) {
 
 func (r *repository) FindByUserId(userId int) ([]Campaign, error) {
 	var campaigns []Campaign
-	err := r.db.Where("user_id = ?", userId).Find(&campaigns).Error
+	err := r.db.Where("user_id = ?", userId).Preload("CampaignImages", "campaign_images.is_primary = 1").Find(&campaigns).Error
 	if err != nil {
 		return campaigns, err
 	}
