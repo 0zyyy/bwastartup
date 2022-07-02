@@ -26,11 +26,11 @@ func (h *campaignHandler) GetCampaigns(c *gin.Context) {
 	userId, _ := strconv.Atoi(c.Query("user_id"))
 	campaigns, err := h.campaignService.GetCampaign(userId)
 	if err != nil {
-		response := helper.APIResponse("Failed to fetch", http.StatusBadRequest, "error", nil)
+		response := helper.APIResponse("Failed to fetch", http.StatusBadRequest, "error", campaign.FormatCampaigns(campaigns))
 		c.JSON(http.StatusBadRequest, response)
 	}
 
 	// kalo sukses
-	response := helper.APIResponse("List of campaigns", http.StatusOK, "success", campaigns)
+	response := helper.APIResponse("List of campaigns", http.StatusOK, "success", campaign.FormatCampaigns(campaigns))
 	c.JSON(http.StatusOK, response)
 }
