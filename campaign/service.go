@@ -10,6 +10,8 @@ type CampaignService interface {
 	GetCampaign(userId int) ([]Campaign, error)
 	GetCampaignById(input GetCampaignDetailInput) (Campaign, error)
 	AddCampaign(input NewCampaign) (Campaign, error)
+	UpdateCampaign(inputId GetCampaignDetailInput, inputData NewCampaign) (Campaign, error)
+	SaveCampaignImage(input GetCampaignImageInput, fileLoc string) (CampaignImage, error)
 }
 
 type campaignService struct {
@@ -61,4 +63,40 @@ func (s *campaignService) AddCampaign(input NewCampaign) (Campaign, error) {
 		return newCampaign, err
 	}
 	return newCampaign, nil
+}
+
+func (s *campaignService) UpdateCampaign(inputId GetCampaignDetailInput, inputData NewCampaign) (Campaign, error) {
+	campaign, err := s.campaignRepo.FindById(inputId.Id)
+	if err != nil {
+		return campaign, err
+	}
+	campaign.Name = inputData.Name
+	campaign.ShortDescription = inputData.ShortDescription
+	campaign.Description = inputData.Description
+	campaign.Perks = inputData.Perks
+	campaign.GoalAmount = inputData.GoalAmount
+
+	updatedCampaign, err := s.campaignRepo.Update(campaign)
+	if err != nil {
+		return updatedCampaign, err
+	}
+	return updatedCampaign, nil
+}
+func (s *campaignService) SaveCampaignImage(input GetCampaignImageInput, fileLoc string) (CampaignImage, error) {
+	isPrimary := 0
+	if input.IsPrimary {
+		isPrimary = 0
+		_, err := s.campaignRepo.MarkAllAsNon(input.Id)
+		if err != nil {
+			return CampaignImage{}, err
+		}
+	}
+	campaignImg := CampaignImage{}
+	campaignImg.CampaignId = input.Id
+	campaignImg.IsPrimary = isPrimary
+	campaginImage, err := s.campaignRepo.CreateImage(campaignImg)
+	if err != nil {
+		return campaginImage, err
+	}
+	return campaginImage, nil
 }
