@@ -4,6 +4,7 @@ import (
 	"bwastartup/auth"
 	"bwastartup/helper"
 	"bwastartup/user"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -106,8 +107,12 @@ func (h *userHandler) UploadAvatar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
+
+	currentUser := c.MustGet("currentUser").(user.User)
+	userID := currentUser.Id
+
 	//INI PAS BAGIAN UPLOAD
-	path := "/img/" + file.Filename
+	path := fmt.Sprintf("/img/usr/%d-%s", userID, file.Filename)
 	err = c.SaveUploadedFile(file, path)
 	if err != nil {
 		data := gin.H{"is_uploaded": false}
@@ -115,6 +120,7 @@ func (h *userHandler) UploadAvatar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
+
 	// INI PAS BAGIAN UPDATE
 	userId := c.MustGet("currentUser").(user.User).Id
 	_, err = h.userService.SaveAvatar(userId, file.Filename)

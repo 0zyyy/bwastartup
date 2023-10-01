@@ -18,11 +18,16 @@ import (
 
 func main() {
 	// dsn := "root:root@tcp(127.0.0.1:3306)/bwastart?charset=utf8mb4&parseTime=True&loc=Local"
-	dsn := "root:root@tcp(127.0.0.1:3306)/bwastart?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:@tcp(127.0.0.1:3306)/bwastart?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
+	//Migrate db
+	// check if table exist
+	db.AutoMigrate(&user.User{}, &campaign.Campaign{}, &campaign.CampaignImage{})
+
 	// repositories
 	userRepository := user.NewRepository(db)
 	campaignRepository := campaign.NewRepository(db)
@@ -44,10 +49,13 @@ func main() {
 	api.POST("/email-checkers", userHandler.CheckEmail)
 	api.POST("/avatar", authMiddleware(authService, userService), userHandler.UploadAvatar)
 	api.POST("/campaigns", authMiddleware(authService, userService), campaignHandler.SaveCampaign)
+
 	// campaigns
 	api.GET("/campaigns", authMiddleware(authService, userService), campaignHandler.GetCampaigns)
 	api.GET("/campaign/:id", campaignHandler.GetCampaign)
 	api.PUT("/campaign/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
+	//save images
+	api.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.UploadCampaignImage)
 	router.Run()
 }
 

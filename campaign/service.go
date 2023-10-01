@@ -83,9 +83,18 @@ func (s *campaignService) UpdateCampaign(inputId GetCampaignDetailInput, inputDa
 	return updatedCampaign, nil
 }
 func (s *campaignService) SaveCampaignImage(input GetCampaignImageInput, fileLoc string) (CampaignImage, error) {
+	campaign, err := s.campaignRepo.FindById(input.Id)
+	if err != nil {
+		return CampaignImage{}, err
+	}
+
+	if campaign.UserId != input.User.Id {
+		return CampaignImage{}, fmt.Errorf("not an owner of the campaign")
+	}
+
 	isPrimary := 0
 	if input.IsPrimary {
-		isPrimary = 0
+		isPrimary = 1
 		_, err := s.campaignRepo.MarkAllAsNon(input.Id)
 		if err != nil {
 			return CampaignImage{}, err
@@ -94,6 +103,8 @@ func (s *campaignService) SaveCampaignImage(input GetCampaignImageInput, fileLoc
 	campaignImg := CampaignImage{}
 	campaignImg.CampaignId = input.Id
 	campaignImg.IsPrimary = isPrimary
+	campaignImg.FileName = fileLoc
+
 	campaginImage, err := s.campaignRepo.CreateImage(campaignImg)
 	if err != nil {
 		return campaginImage, err
