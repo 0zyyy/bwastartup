@@ -5,6 +5,7 @@ import (
 	"bwastartup/campaign"
 	"bwastartup/handler"
 	"bwastartup/helper"
+	"bwastartup/transaction"
 	"bwastartup/user"
 	"log"
 	"net/http"
@@ -26,24 +27,29 @@ func main() {
 
 	//Migrate db
 	// check if table exist
-	db.AutoMigrate(&user.User{}, &campaign.Campaign{}, &campaign.CampaignImage{})
+	db.AutoMigrate(&user.User{}, &campaign.Campaign{}, &campaign.CampaignImage{}, &transaction.Transaction{})
 
 	// repositories
 	userRepository := user.NewRepository(db)
 	campaignRepository := campaign.NewRepository(db)
+	transactionRepository := transaction.NewRepository(db)
 
 	//services
 	campaignService := campaign.NewService(campaignRepository)
 	userService := user.NewService(userRepository)
 	authService := auth.NewService()
+	transactionService := transaction.NewService(transactionRepository, campaignRepository)
 
 	//handlers
 	campaignHandler := handler.NewCampaignHandler(campaignService)
 	userHandler := handler.NewUserHandler(userService, authService)
+	transactionHandler := handler.NewTransactionHandler(transactionService)
 	//
 	router := gin.Default()
 	router.Static("/images", "./img")
 	api := router.Group("/api/v1")
+
+	// users
 	api.POST("/user", userHandler.RegisterUser)
 	api.POST("/sessions", userHandler.Login)
 	api.POST("/email-checkers", userHandler.CheckEmail)
@@ -56,6 +62,9 @@ func main() {
 	api.PUT("/campaign/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
 	//save images
 	api.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.UploadCampaignImage)
+
+	// transaction [TODO]
+	api.GET("/campaigns/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
 	router.Run()
 }
 
