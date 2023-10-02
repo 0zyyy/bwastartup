@@ -3,8 +3,10 @@ package main
 import (
 	"bwastartup/auth"
 	"bwastartup/campaign"
+	"bwastartup/configs"
 	"bwastartup/handler"
 	"bwastartup/helper"
+	"bwastartup/payment"
 	"bwastartup/transaction"
 	"bwastartup/user"
 	"log"
@@ -13,6 +15,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/coreapi"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -24,6 +28,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
+	// init snap client
+	var client coreapi.Client
+	client.New(configs.SandboxServerKey, midtrans.Sandbox)
 
 	//Migrate db
 	// check if table exist
@@ -38,15 +46,18 @@ func main() {
 	campaignService := campaign.NewService(campaignRepository)
 	userService := user.NewService(userRepository)
 	authService := auth.NewService()
-	transactionService := transaction.NewService(transactionRepository, campaignRepository)
+	paymentService := payment.NewService(client)
+	transactionService := transaction.NewService(transactionRepository, campaignRepository, paymentService)
 
 	//handlers
 	campaignHandler := handler.NewCampaignHandler(campaignService)
 	userHandler := handler.NewUserHandler(userService, authService)
 	transactionHandler := handler.NewTransactionHandler(transactionService)
+	paymentHandler := handler.NewPaymentHandler(paymentService, transactionService)
 	//
 	router := gin.Default()
 	router.Static("/images", "./img")
+	router.Use(corsMiddleware())
 	api := router.Group("/api/v1")
 
 	// users
@@ -54,17 +65,19 @@ func main() {
 	api.POST("/sessions", userHandler.Login)
 	api.POST("/email-checkers", userHandler.CheckEmail)
 	api.POST("/avatar", authMiddleware(authService, userService), userHandler.UploadAvatar)
-	api.POST("/campaigns", authMiddleware(authService, userService), campaignHandler.SaveCampaign)
 
 	// campaigns
+	api.POST("/campaigns", authMiddleware(authService, userService), campaignHandler.SaveCampaign)
 	api.GET("/campaigns", authMiddleware(authService, userService), campaignHandler.GetCampaigns)
 	api.GET("/campaign/:id", campaignHandler.GetCampaign)
 	api.PUT("/campaign/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
-	//save images
 	api.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.UploadCampaignImage)
 
 	// transaction [TODO]
 	api.GET("/campaigns/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
+	api.GET("/transactions", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
+	api.POST("/transactions", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
+	api.GET("/transactions/notification", paymentHandler.Notification)
 	router.Run()
 }
 
@@ -103,5 +116,14 @@ func authMiddleware(authService auth.Service, userService user.Service) gin.Hand
 			return
 		}
 		c.Set("currentUser", user)
+	}
+}
+
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT,DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Authorization, Access-Control-Request-Method, Access-Control-Request-Headers")
 	}
 }

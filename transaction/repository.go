@@ -1,13 +1,17 @@
 package transaction
 
 import (
+	"log"
+
 	"gorm.io/gorm"
 )
 
 type Repository interface {
 	GetByCampaignID(campaignID int) ([]Transaction, error)
-	AddTransaction(transaction Transaction) (Transaction, error)
+	Add(transaction Transaction) (Transaction, error)
 	GetByUserID(UserID int) ([]Transaction, error)
+	Update(transaction Transaction) (Transaction, error)
+	GetByID(ID int) (Transaction, error)
 }
 
 type repository struct {
@@ -29,12 +33,12 @@ func (r *repository) GetByCampaignID(campaignID int) ([]Transaction, error) {
 	return transactions, nil
 }
 
-func (r *repository) AddTransaction(transaction Transaction) (Transaction, error) {
+func (r *repository) Add(transaction Transaction) (Transaction, error) {
 	err := r.db.Create(&transaction).Error
 	if err != nil {
 		return transaction, err
 	}
-
+	log.Default().Println("Add Transaction success", transaction)
 	return transaction, nil
 }
 
@@ -47,4 +51,23 @@ func (r *repository) GetByUserID(UserID int) ([]Transaction, error) {
 	}
 
 	return transactions, nil
+}
+
+func (r *repository) Update(transaction Transaction) (Transaction, error) {
+	err := r.db.Save(&transaction).Error
+	if err != nil {
+		return transaction, err
+	}
+
+	return transaction, nil
+}
+
+func (r *repository) GetByID(ID int) (Transaction, error) {
+	var transaction Transaction
+
+	err := r.db.Where("id = ?", ID).Find(&transaction).Error
+	if err != nil {
+		return transaction, err
+	}
+	return transaction, nil
 }

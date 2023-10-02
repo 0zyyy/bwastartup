@@ -2,7 +2,7 @@ package transaction
 
 import (
 	"bwastartup/campaign"
-	"os/user"
+	"bwastartup/user"
 	"time"
 )
 
@@ -15,6 +15,7 @@ type Transaction struct {
 	Code       string
 	User       user.User
 	Campaign   campaign.Campaign
+	PaymentURL string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
