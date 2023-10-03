@@ -59,7 +59,10 @@ func main() {
 	router.Static("/images", "./img")
 	router.Use(corsMiddleware())
 	api := router.Group("/api/v1")
-
+	// check
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "Testing golang"})
+	})
 	// users
 	api.POST("/user", userHandler.RegisterUser)
 	api.POST("/sessions", userHandler.Login)
@@ -69,7 +72,7 @@ func main() {
 	// campaigns
 	api.POST("/campaigns", authMiddleware(authService, userService), campaignHandler.SaveCampaign)
 	api.GET("/campaigns", authMiddleware(authService, userService), campaignHandler.GetCampaigns)
-	api.GET("/campaign/:id", campaignHandler.GetCampaign)
+	api.GET("/campaign/:id", authMiddleware(authService, userService), campaignHandler.GetCampaign)
 	api.PUT("/campaign/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
 	api.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.UploadCampaignImage)
 
@@ -77,7 +80,7 @@ func main() {
 	api.GET("/campaigns/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
 	api.GET("/transactions", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
 	api.POST("/transactions", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
-	api.GET("/transactions/notification", paymentHandler.Notification)
+	api.POST("/transactions/notification", paymentHandler.Notification)
 	router.Run()
 }
 

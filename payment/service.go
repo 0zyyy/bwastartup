@@ -3,6 +3,8 @@ package payment
 import (
 	"bwastartup/configs"
 	"bwastartup/user"
+	"crypto/sha512"
+	"encoding/hex"
 	"log"
 	"strconv"
 
@@ -18,6 +20,7 @@ type service struct {
 type Service interface {
 	GetPaymentUrl(transaction Transaction, user user.User) (string, error)
 	GetStatus(orderID string) (*coreapi.TransactionStatusResponse, error)
+	CheckSignature(signatureInput SignatureInput) (bool, error)
 }
 
 func setupGlobalMidtransConfig() {
@@ -47,7 +50,6 @@ func (s *service) GetPaymentUrl(transaction Transaction, user user.User) (string
 		log.Println("error", err)
 		return "", err
 	}
-	log.Println("responseToken", responseToken)
 	return responseToken.RedirectURL, nil
 }
 
@@ -56,6 +58,16 @@ func (s *service) GetStatus(orderID string) (*coreapi.TransactionStatusResponse,
 	if err != nil {
 		return &coreapi.TransactionStatusResponse{}, err
 	}
-	log.Println("response", response)
+	log.Println("response", response.SignatureKey)
 	return response, nil
+}
+
+func (s *service) CheckSignature(signatureInput SignatureInput) (bool, error) {
+	signature := sha512.New()
+	signature.Write([]byte(signatureInput.OrderID + signatureInput.StatusCode + signatureInput.GrossAmount + configs.SandboxServerKey))
+	signatureKey := hex.EncodeToString(signature.Sum(nil))
+	if signatureKey != signatureInput.SignatureKey {
+		return false, nil
+	}
+	return true, nil
 }
